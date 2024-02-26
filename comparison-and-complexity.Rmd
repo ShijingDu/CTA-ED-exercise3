@@ -296,5 +296,136 @@ ggplot(sum_corpus, aes(x=speaker, y=mean)) +
 ## Exercises
 
 1. Compute distance measures such as "euclidean" or "manhattan" for the MP tweets as above, comparing between tweets by MPs and tweets by PM, Theresa May. 
+```{r}
+#estimate distance, grouping by username
+euclidean_dis <- dfmat %>%
+  dfm_group(groups = username) %>%
+  textstat_dist(margin = "documents", method = "euclidean") 
+
+#use euclidean measure,keep text about Theresa May
+#convert to a matrix
+eucmat <- as.matrix(euclidean_dis) 
+
+#removing distance of Theresa May with herself and convert it to a datframe object
+#generate data frame keeping only the row for Theresa May
+eucmatdf <- as.data.frame(eucmat[23, c(1:22, 24)])
+
+#rename column
+colnames(eucmatdf) <- "dist_may"
+ 
+#create column variable from rownames 
+eucmatdf <- tibble::rownames_to_column(eucmatdf, "username")
+
+#plot
+ggplot(eucmatdf) +
+  geom_point(aes(x=reorder(username, -dist_may), y= dist_may)) + 
+  coord_flip() +
+  xlab("MP username") +
+  ylab("euclidean distance score") + 
+  theme_minimal()
+
+#In this graph, the Euclidean Distance Score indicates the difference between the content of each MP's tweets and then-Prime Minister Theresa May's tweets. philiphammonduk scored very low, which could mean that his tweets were similar to Theresa May's.
+```
 2. Estimate at least three other complexity measures for the EU speeches as above. Consider how the results compare to the Flesch-Kincaid measure used in the article by @schoonvelde_liberals_2019.
+```{r}
+#FOG readability/complexity scores were calculated using the quanteda quanteda.textstats package
+speeches$fog <- textstat_readability(speeches$text, measure = "FOG")
+# returned as quanteda data.frame with document-level information;
+# need just the score:
+speeches$fog <- speeches$fog$FOG
+
+#information aggregated over each of politicians and recorded in the data under a column called “speaker.”
+#get mean and standard deviation of FOG, and N of speeches for each speaker
+sum_corpus1 <- speeches %>%
+  group_by(speaker) %>%
+  summarise(mean = mean(fog, na.rm=TRUE),
+                   SD=sd(fog, na.rm=TRUE),
+                   N=length(speaker))
+
+# calculate standard errors and confidence intervals
+sum_corpus1$se <- sum_corpus1$SD / sqrt(sum_corpus1$N)
+sum_corpus1$min <- sum_corpus1$mean - 1.96*sum_corpus1$se
+sum_corpus1$max <- sum_corpus1$mean + 1.96*sum_corpus1$se
+#tidy format
+sum_corpus1
+#plot
+ggplot(sum_corpus1, aes(x=speaker, y=mean)) +
+  geom_bar(stat="identity") + 
+  geom_errorbar(ymin=sum_corpus1$min,ymax=sum_corpus1$max, width=.2) +
+  coord_flip() +
+  xlab("") +
+  ylab("Mean Complexity") + 
+  theme_minimal() + 
+  ylim(c(0,20))
+
+#In this graph, M. Rajoy has the highest mean Fog index which indicates that his speech has the most increased linguistic complexity among the four politicians. At the same time, D. Cameron has the lowest mean Fog index, indicating that his speech has the lowest linguistic complexity among this group.
+```
+```{r}
+#SMOG readability/complexity scores were calculated using the quanteda quanteda.textstats package
+speeches$smog <- textstat_readability(speeches$text, measure = "SMOG")
+# returned as quanteda data.frame with document-level information;
+# need just the score:
+speeches$smog <- speeches$smog$SMOG
+
+#information aggregated over each of politicians and recorded in the data under a column called “speaker.”
+#get mean and standard deviation of SMOG, and N of speeches for each speaker
+sum_corpus2 <- speeches %>%
+  group_by(speaker) %>%
+  summarise(mean = mean(smog, na.rm=TRUE),
+                   SD=sd(smog, na.rm=TRUE),
+                   N=length(speaker))
+
+# calculate standard errors and confidence intervals
+sum_corpus2$se <- sum_corpus2$SD / sqrt(sum_corpus2$N)
+sum_corpus2$min <- sum_corpus2$mean - 1.96*sum_corpus2$se
+sum_corpus2$max <- sum_corpus2$mean + 1.96*sum_corpus2$se
+
+#tidy format
+sum_corpus2
+
+#plot
+ggplot(sum_corpus2, aes(x=speaker, y=mean)) +
+  geom_bar(stat="identity") + 
+  geom_errorbar(ymin=sum_corpus2$min,ymax=sum_corpus2$max, width=.2) +
+  coord_flip() +
+  xlab("") +
+  ylab("Mean Complexity") + 
+  theme_minimal() + 
+  ylim(c(0,20))
+#M. Rajoy's speech has the highest average SMOG complexity score, implying that a higher level of education is required to understand the content of his remarks.D. Cameron's speech has the lowest average SMOG score, which may imply that his speech is easier to understand.
+```
+```{r}
+#coleman-liau readability/complexity scores were calculated using the quanteda quanteda.textstats package
+speeches$coleman.liau <- textstat_readability(speeches$text, measure = "Coleman.Liau")
+
+# returned as quanteda data.frame with document-level information;
+# need just the score:
+speeches$coleman.liau <- speeches$coleman.liau$Coleman.Liau
+
+#information aggregated over each of politicians and recorded in the data under a column called “speaker.”
+#get mean and standard deviation of coleman-liau, and N of speeches for each speaker
+sum_corpus3 <- speeches %>%
+  group_by(speaker) %>%
+  summarise(mean = mean(coleman.liau, na.rm=TRUE),
+                   SD=sd(coleman.liau, na.rm=TRUE),
+                   N=length(speaker))
+
+# calculate standard errors and confidence intervals
+sum_corpus3$se <- sum_corpus3$SD / sqrt(sum_corpus3$N)
+sum_corpus3$min <- sum_corpus3$mean - 1.96*sum_corpus3$se
+sum_corpus3$max <- sum_corpus3$mean + 1.96*sum_corpus3$se
+
+#tidy format
+sum_corpus3
+
+#plot
+ggplot(sum_corpus3, aes(x=speaker, y=mean)) +
+  geom_bar(stat="identity") + 
+  geom_errorbar(ymin=sum_corpus3$min,ymax=sum_corpus3$max, width=.2) +
+  coord_flip() +
+  xlab("") +
+  ylab("Mean Complexity") + 
+  theme_minimal() + 
+  ylim(c(0,20))
+```
 3. (Advanced---optional) Estimate similarity scores between the MP tweets and the PM tweets for each week contained in the data. Plot the results. 
